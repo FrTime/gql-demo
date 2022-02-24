@@ -1,0 +1,3 @@
+gql.localhost {
+  reverse_proxy graphql-engine:8888
+}

@@ -1,0 +1,57 @@
+version: "3.4"
+
+services:
+  postgres:
+    container_name: postgres_db
+    image: "clkao/postgres-plv8:12-2"
+    environment:
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "password"
+      PGDATA: "/data/postgres"
+    volumes:
+      - postgres:/data/postgres
+    ports:
+      - "15432:5432"
+    restart: unless-stopped
+  graphql-engine:
+    container_name: hasura_gql
+    image: hasura/graphql-engine:v2.2.0
+    ## Default port is 8080, specifying below:
+    ports:
+      - "8888:8888"
+    depends_on:
+      - "postgres"
+    restart: always
+    environment:
+      ## Default port is 8080, specifying below:
+      HASURA_GRAPHQL_SERVER_PORT: 8888
+      HASURA_GRAPHQL_ENABLE_CONSOLE: "true"
+      HASURA_GRAPHQL_DEV_MODE: "true"
+      HASURA_GRAPHQL_METADATA_DATABASE_URL: postgres://postgres:password@postgres:5432/postgres
+      PG_DATABASE_URL: postgres://postgres:password@postgres:5432/postgres
+      HASURA_GRAPHQL_ENABLED_LOG_TYPES: startup, http-log, webhook-log, websocket-log, query-log
+      ## Update password below
+      HASURA_GRAPHQL_ADMIN_SECRET: PASSWORD_HERE
+      ## Update below with jwt cert in format of '{"type": "RS512", "key": "-----BEGIN CERTIFICATE-----\n<SUPER LONG KEY STRING HERE >\n-----END CERTIFICATE-----"}'
+      ## Do not include the '<' and '>'
+      ## https://hasura.io/docs/latest/graphql/core/guides/integrations/auth0-jwt.html
+      HASURA_GRAPHQL_JWT_SECRET: CERT_HERE
+    command:
+      - graphql-engine
+      - serve
+  caddy:
+    container_name: caddy_server
+    image: caddy/caddy
+    depends_on:
+      - "graphql-engine"
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_certs:/root/.caddy
+volumes:
+  pgadmin:
+  postgres:
+  caddy_certs:
